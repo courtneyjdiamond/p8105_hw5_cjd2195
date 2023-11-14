@@ -1,0 +1,121 @@
+---
+title: "P8105 Homework 5"
+author: "Courtney Diamond"
+date: "2023-11-13"
+output: github_document
+---
+
+
+```{r setup, include = FALSE}
+library(tidyverse)
+library(p8105.datasets)
+library(magrittr)
+library(ggridges)
+library(lubridate)
+
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  fig.width = 6,
+  fig.asp = 0.6,
+  out.width = "90%"
+)
+
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+
+## Problem 1
+
+First up, we are going to load the specified data. I have downloaded the CSV from the github and saved it into a `data` file within this repository.
+
+```{r}
+homicide_data = read_csv("data/homicide-data.csv")
+```
+
+The raw data consists of `r ncol(homicide_data)` variables and `r nrow(homicide_data)` individual observations. The variables are: 
+
+* `uid`: a unique identifier for each homicide
+* `reported_date`: the date the homicide was reported, in yyyymmdd format
+* `victim_last`: the victim's last name
+* `victim_first`: the victim's first name
+* `victim_race`: the victim's race
+* `victim_age`: the victim's age
+* `victim_sex`: the victim's sex (male, female, or unknown)
+* `city`: the city of the homicide
+* `state`: the state of the homicide
+* `lat`: the lattitude of the homicide
+* `long`: the longitude of the homicide
+* `disposition`: the case status, i.e. 'Closed by arrest', 'Closed without arrest', or 'Open/No arrest'
+
+
+
+```{r}
+solved_unsolved_ratio_table =
+  homicide_data |> 
+  mutate(city_state = str_c(as.character(city), as.character(state), sep = ", ")) |> 
+  filter(city_state != 'Tulsa, AL') |> 
+  mutate(status = case_when(
+    disposition == "Closed by arrest" ~ "solved",
+    disposition == "Closed without arrest" ~ "unsolved",
+    disposition == "Open/No arrest" ~ "unsolved"
+  )) |>
+  group_by(city_state) |> 
+  summarize(all_homicides = n(),
+            unsolved_homicides = sum(status == "unsolved"))
+
+solved_unsolved_ratio_table
+
+solved_unsolved_ratio_table |> 
+  knitr::kable()
+  
+```
+
+```{r}
+baltimore_homicide_prop = 
+  prop.test(x = filter(solved_unsolved_ratio_table, city_state == 'Baltimore, MD') |>
+              pull(unsolved_homicides),
+            n = filter(solved_unsolved_ratio_table, city_state == 'Baltimore, MD') |>
+              pull(all_homicides)) |> 
+  broom::tidy() |> 
+  select(estimate, conf.low, conf.high)
+
+baltimore_homicide_prop
+```
+
+Ok, we worked out an example case for baltimore. Let's make map these functions to the whole dataframe.  
+```{r}
+calculate_unsolved_prob =
+  solved_unsolved_ratio_table |> 
+  mutate(prop_results = 
+           map2(unsolved_homicides, all_homicides, \(x, y) prop.test(x = x, n = y)),
+         tidy_results = 
+           map(prop_results, broom::tidy)) |> 
+  select(city_state, tidy_results) |> 
+  unnest(tidy_results) |> 
+  select(city_state, estimate, conf.low, conf.high) |> 
+  mutate(city_state = fct_reorder(city_state, estimate))
+  
+
+calculate_unsolved_prob
+
+calculate_unsolved_prob |> 
+  ggplot(aes(x = city_state, y = estimate)) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) + 
+  geom_point() +
+  theme(axis.text.x  = element_text(angle = 45, vjust = 1, hjust = 1))
+
+
+```
+
+## Problem 2
