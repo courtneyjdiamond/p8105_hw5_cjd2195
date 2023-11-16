@@ -17,7 +17,7 @@ library(lubridate)
 knitr::opts_chunk$set(
   echo = TRUE,
   warning = FALSE,
-  fig.width = 6,
+  fig.width = 9,
   fig.asp = 0.6,
   out.width = "90%"
 )
@@ -150,7 +150,13 @@ study_results = files_df |>
 
 study_results |> 
   ggplot(aes(x = study_week, y = study_values, color = study_id)) + 
-  geom_line(aes(linetype = study_arm))
+  geom_line(aes(linetype = study_arm)) +
+  labs(title = "Weekly Study Measurement Values",
+       x = "Study Week",
+       y = "Study Measurement Values",
+       color = "Subject ID",
+       linetype = "Study Arm")
+
 ```
 
 The above spaghetti plot shows the changes in weekly study values across both study arms (control and experimental). We can see that the control arm, represented by the solid lines, have some week-to-week variation but ultimately there isn't a net increase or decrease in values from the first measurement to the last. In the experimental arm, we see overall net increases in the study value over the span of the trial. 
