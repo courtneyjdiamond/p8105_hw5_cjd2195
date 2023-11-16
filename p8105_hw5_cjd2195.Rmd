@@ -119,12 +119,7 @@ calculate_unsolved_prob |>
 
 ## Problem 2
 
-Create a tidy dataframe containing data from all participants, including the subject ID, arm, and observations over time:
-
-Start with a dataframe containing all file names; the list.files function will help
-Iterate over file names and read in data for each subject using purrr::map and saving the result as a new variable in the dataframe
-Tidy the result; manipulate file names to include control arm and subject ID, make sure weekly observations are “tidy”, and do any other tidying that’s necessary
-Make a spaghetti plot showing observations on each subject over time, and comment on differences between groups.
+First I need to load my data. In my case, I saved the Problem 1 dataset to the same "data" folder that I'm using for problem 2, which explains these first few lines of my code where I need to drop this file from the list I'm trying to consider.
 
 ```{r}
 files_list = list.files("data")[-21]
@@ -200,7 +195,7 @@ Ok, now I can start to consider how I want to store my data to run these trials 
 ```{r}
 normal_dist_ttest_sim_df = 
   expand_grid(
-    mu = c(0:6),
+    mu = c(1:6),
     iter = 1:5000
   ) |> 
   mutate(output_dataset = map(mu, \(x) rnorm(n = n, mean = x, sd = sigma))) |> 
@@ -224,7 +219,11 @@ normal_dist_ttest_sim_df |>
   labs(title = "Correlation of Effect Size and Power", 
        x = "True mu value",
        y = "Proportion of rejections") 
+```
 
+The above graph demonstrates the principle that as the effect size we are looking to detect increases, the power of our test also increases. When the true `mu` was 1 and the null hypothesis `mu` was 0, we had very few instances in which we rejected the null hypothesis, compared to when our true `mu` was 6 and the null hypothesis `mu` was 0 in which every test resulted in rejecting the null. 
+
+```{r}
 normal_dist_ttest_sim_df |> 
   group_by(mu) |> 
   summarize(average_mu_hat = mean(estimate)) |> 
@@ -243,6 +242,6 @@ normal_dist_ttest_sim_df |>
   labs(title = "Comparison of True Mu and Average Sample Mu, Only Trials Where Null Was Rejected",
        x = "True mu value",
        y = "Average sample mu")
-
 ```
 
+The above graphs demonstrate the notion that, fundamentally, the samples which result in us being able to reject the null hypothesis fundamentally have a different average mu hat than those samples for which we do not ultimately reject the null hypothesis. This makes sense- our hypothesis test is essentially asking whether we can believe that our data come from some prespecified null distribution (in our case, this was always a Normal distribution with mu = 0), and we reject the null when we have enough evidence that these data are likely coming from a different distribution. To oversimplify, we wanted to see if our data were "extreme" enough to reject the null. When we look at the averages of only those samples where we've essentially said "Yes, these are some extreme data", they are going to be skewed compared to the averages of ALL the samples that we generated.
