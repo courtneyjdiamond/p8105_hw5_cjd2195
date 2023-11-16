@@ -106,7 +106,6 @@ calculate_unsolved_prob =
   select(city_state, estimate, conf.low, conf.high) |> 
   mutate(city_state = fct_reorder(city_state, estimate))
   
-
 calculate_unsolved_prob
 
 calculate_unsolved_prob |> 
@@ -119,3 +118,42 @@ calculate_unsolved_prob |>
 ```
 
 ## Problem 2
+
+Create a tidy dataframe containing data from all participants, including the subject ID, arm, and observations over time:
+
+Start with a dataframe containing all file names; the list.files function will help
+Iterate over file names and read in data for each subject using purrr::map and saving the result as a new variable in the dataframe
+Tidy the result; manipulate file names to include control arm and subject ID, make sure weekly observations are “tidy”, and do any other tidying that’s necessary
+Make a spaghetti plot showing observations on each subject over time, and comment on differences between groups.
+
+```{r}
+files_list = list.files("data")[-21]
+files_list
+
+files_df = tibble(
+  files_list
+)
+
+study_results = files_df |> 
+  mutate(files_name = str_c("data/", files_list)) |> 
+  mutate(data = map(files_name, read_csv)) |> 
+  unnest(data) |> 
+  mutate(across(where(is.numeric), ~ num(.x, digits = 2))) |> 
+  mutate(study_arm = str_sub(files_list, 1, 3),
+         study_arm = as.factor(study_arm)) |> 
+  mutate(study_id = str_sub(files_list, 1, 6)) |> 
+  select(!files_name) |> 
+  select(files_list, study_id, study_arm, week_1:week_8) |> 
+  pivot_longer(week_1:week_8, names_to = 'study_week', values_to = 'study_values') |> 
+  mutate(study_week = str_sub(study_week, -1, -1),
+         study_week = as.numeric(study_week))
+
+study_results |> 
+  ggplot(aes(x = study_week, y = study_values, color = study_id)) + 
+  geom_line(aes(linetype = study_arm))
+```
+
+The above spaghetti plot shows the changes in weekly study values across both study arms (control and experimental). We can see that the control arm, represented by the solid lines, have some week-to-week variation but ultimately there isn't a net increase or decrease in values from the first measurement to the last. In the experimental arm, we see overall net increases in the study value over the span of the trial. 
+
+
+
